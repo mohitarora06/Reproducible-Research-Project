@@ -1,6 +1,7 @@
 ---
-title: "NOAA Storm Data Analysis to quantize the impact both Economically and Health wise"
-output: html_document
+title: NOAA Storm Data Analysis to quantize the impact both Economically and Health
+  wise
+output: pdf_document
 ---
 
 Storms and other severe weather events can cause both public health and economic problems for communities and municipalities. Many severe events can result in fatalities, injuries, and property damage, and preventing such outcomes to the extent possible is a key concern.
@@ -10,7 +11,7 @@ This project involves exploring the U.S. National Oceanic and Atmospheric Admini
 Data is taken and preprocessed in Data Processing section to produce tidy data which is further used to plot various graphs, in Result section, which shows what different types of severe weather events cause maximum damage in terms of injuries, fatalities as well as economic damage.
 
 ##Data Processing
-```{r}
+```{r, out.width = '1000px', dpi=200}
 #Loading required libraries
 library(reshape)
 library(ggplot2)
@@ -71,7 +72,7 @@ shortEconomic <- melt(totalEconomicData)
 
 ##Result
 
-```{r, echo=TRUE}
+```{r, echo=TRUE, out.width = '1000px', dpi=200}
 #Plotting data in decreasing order of damage to health
 g <- ggplot(short.m, aes(x = reorder(EventTypes, -value), y = value, fill = variable))
 g <- g + geom_bar(stat = "identity",position = "dodge", colour="black") + labs(x = "Event") + 
