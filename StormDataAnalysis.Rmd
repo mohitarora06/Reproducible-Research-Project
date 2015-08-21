@@ -1,0 +1,93 @@
+---
+title: "NOAA Storm Data Analysis to quantize the impact both Economically and Health wise"
+output: html_document
+---
+
+Storms and other severe weather events can cause both public health and economic problems for communities and municipalities. Many severe events can result in fatalities, injuries, and property damage, and preventing such outcomes to the extent possible is a key concern.
+
+This project involves exploring the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database. This database tracks characteristics of major storms and weather events in the United States, including when and where they occur, as well as estimates of any fatalities, injuries, economic damage.
+
+Data is taken and preprocessed in Data Processing section to produce tidy data which is further used to plot various graphs, in Result section, which shows what different types of severe weather events cause maximum damage in terms of injuries, fatalities as well as economic damage.
+
+##Data Processing
+```{r}
+#Loading required libraries
+library(reshape)
+library(ggplot2)
+
+#Loading data
+DATA <- read.table("repdata-data-StormData.csv", header = TRUE, sep = ",")
+
+#Subsetting data
+requiredData <- DATA[, c("EVTYPE", "FATALITIES", "INJURIES", "PROPDMG", "PROPDMGEXP", "CROPDMGEXP", "CROPDMG")]
+
+#Calculating total property damage caused by natural clamities
+requiredData$PROPDMGCOST = 0
+requiredData[requiredData$PROPDMGEXP == "K", ]$PROPDMGCOST <- requiredData[requiredData$PROPDMGEXP == "K", ]$PROPDMG * 10^3
+requiredData[requiredData$PROPDMGEXP == "H", ]$PROPDMGCOST <- requiredData[requiredData$PROPDMGEXP == "H", ]$PROPDMG * 10^2
+requiredData[requiredData$PROPDMGEXP == "M", ]$PROPDMGCOST <- requiredData[requiredData$PROPDMGEXP == "M", ]$PROPDMG * 10^6
+requiredData[requiredData$PROPDMGEXP == "B", ]$PROPDMGCOST <- requiredData[requiredData$PROPDMGEXP == "B", ]$PROPDMG * 10^9
+
+#Calculating total crop damage caused by natural clamitites 
+requiredData$CROPDMGCOST = 0
+requiredData[requiredData$CROPDMGEXP == "K", ]$CROPDMGCOST <- requiredData[requiredData$CROPDMGEXP == "K", ]$CROPDMG * 10^3
+requiredData[requiredData$CROPDMGEXP == "H", ]$CROPDMGCOST <- requiredData[requiredData$CROPDMGEXP == "H", ]$CROPDMG * 10^2
+requiredData[requiredData$CROPDMGEXP == "M", ]$CROPDMGCOST <- requiredData[requiredData$CROPDMGEXP == "M", ]$CROPDMG * 10^6
+requiredData[requiredData$CROPDMGEXP == "B", ]$CROPDMGCOST <- requiredData[requiredData$CROPDMGEXP == "B", ]$CROPDMG * 10^9
+
+
+#Data to know the extent of damage to health cause by natural clamities
+FatalitiesData <- aggregate(FATALITIES ~ EVTYPE, requiredData, sum)
+InjuriesData <- aggregate(INJURIES ~ EVTYPE, requiredData, sum)
+
+#Merging data on the basis of natural clamity
+totalEffectData <- merge(InjuriesData, FatalitiesData , by="EVTYPE", all.x=TRUE)
+colnames(totalEffectData) <- c("EventTypes", "Injuries", "Fatalities")
+
+#Ordering data based on both fatalites and injuries and taking top 10 of them
+totalEffectData <- totalEffectData[order(totalEffectData$Injuries, totalEffectData$Fatalities, decreasing = TRUE),][1:10,]
+
+#Reshaping data to produce variable
+short.m <- melt(totalEffectData)
+
+#Data to know the extent of damage economically caused by natural clamities 
+CropData <- aggregate(CROPDMGCOST ~ EVTYPE, requiredData, sum)
+PropData <- aggregate(PROPDMGCOST ~ EVTYPE, requiredData, sum)
+
+#Ordering both the data
+CropData <- CropData[order(CropData$CROPDMGCOST, decreasing = TRUE), ][1:10, ]
+PropData <- PropData[order(PropData$PROPDMGCOST, decreasing = TRUE), ][1:10, ]
+
+#Merging data on the basis of natural clamity
+totalEconomicData <- merge(CropData, PropData , by="EVTYPE", all.x=TRUE)
+colnames(totalEconomicData) <- c("EventTypes", "Crop", "Prop")
+
+#Ordering data based on both Crop and Property and taking top 10 of them
+totalEconomicData <- totalEconomicData[order(totalEconomicData$Crop, totalEconomicData$Prop, decreasing = TRUE),][1:10,]
+
+#Reshaping data to produce variable
+shortEconomic <- melt(totalEconomicData)
+```
+
+##Result
+
+```{r, echo=TRUE}
+#Plotting data in decreasing order of damage to health
+g <- ggplot(short.m, aes(x = reorder(EventTypes, -value), y = value, fill = variable))
+g <- g + geom_bar(stat = "identity",position = "dodge", colour="black") + labs(x = "Event") + 
+labs(y = "Population Hazards") +  ggtitle("Total Health Damage by Severe Weather Events") + 
+theme(axis.text.x = element_text(angle = 90, hjust = 1))
+print(g)
+
+#Plotting the data for damage due to crops
+gCrop <- ggplot(CropData, aes(x = reorder(EVTYPE, -CROPDMGCOST), y = CROPDMGCOST / 10^9))
+gCrop <- gCrop + geom_bar(stat = "identity", fill = "steelblue") + labs(x = "Event") + 
+labs(y = "Crop Damage (Billion Dollars)") + ggtitle("Total Damage to Crops due to Sever Weather") +             theme(axis.text.x = element_text(angle = 90, hjust = 1))
+print(gCrop)
+
+#Plotting the data for damage due to crops
+gEco <- ggplot(shortEconomic, aes(x = reorder(EventTypes, -value), y = value / 10^9, fill = variable))
+gEco <- gEco + geom_bar(stat = "identity", colour="black") + labs(x = "Event") + 
+labs(y = "Economic Damage (Billion Dolloars)") + ggtitle("Total Economic Damage due to Sever Weather") + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+print(gEco)
+```
